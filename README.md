@@ -1,5 +1,7 @@
 # MMPRV_F1Tenth
 
+This repo supports [Multimodal Model Predictive Runtime Verification](https://temporallogic.org/research/MMPRV/index.html) of the [F1Tenth](https://f1tenth.org/) vehicle.
+
 Without Monte Carlo Multimodal Prediction|  With Monte Carlo Multimodal Prediction 
 :-------------------------:|:-------------------------:
 ![](Image1.gif) | ![](Image2.gif)
@@ -88,4 +90,6 @@ To manually move the opponent vehicle (orange) around use 2D Goal Pose in the to
 
 Change values of K and N in $HOME/sim_ws/src/MMPRV_F1Tenth/mpc/mpc_node.cpp
 
-Each run automatically writes the results to a csv as well as the latency in $HOME/sim_ws.
+Each run automatically writes the trace, atomic probability, and latency to a csv $HOME/sim_ws.
+
+Reference the following repo for running MMPRV on the collected data: [https://github.com/aaurandt/MMPRV_R2U2](https://github.com/aaurandt/MMPRV_R2U2)

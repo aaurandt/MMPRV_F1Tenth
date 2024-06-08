@@ -52,6 +52,7 @@ public:
       if(file_trace.fail())
       	perror("./ego_vehicle_trace.csv");
       file_trace << "#x_ego, y_ego, x_opp, y_opp\n";
+      file_trace_prob.open("./ego_vehicle_trace_prob_K_216_N_20.csv", std::fstream::out | std::fstream::trunc);
       file_timings.open("./mpc_mc_timings_K_216_N_20.csv", std::fstream::out | std::fstream::trunc);
       if(file_timings.fail())
       	perror("./mpc_mc_timings.csv");
@@ -59,6 +60,7 @@ public:
    }
    ~MPCNode(){
    	file_trace.close();
+   	file_trace_prob.close();
    	file_timings.close();
    }
 private:
@@ -74,6 +76,7 @@ private:
    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_monte_carlo_predictions;
    
    std::ofstream file_trace;
+   std::ofstream file_trace_prob;
    std::ofstream file_timings;
    std::mt19937 gen;
    std::uniform_real_distribution<> velocity_dist;
@@ -205,14 +208,18 @@ private:
    void recordPoints(std::vector<State>& mpc_predict_trajectory, State monte_carlo_trajectories[NUM_TRAJECTORIES][TRAJECTORY_LENGTH+1]){
    	file_trace << mpc_predict_trajectory[0].getX() << "," << mpc_predict_trajectory[0].getY() 
 				<< "," << monte_carlo_trajectories[0][0].getX() << "," << monte_carlo_trajectories[0][0].getY() << ",|,";
+	file_trace_prob << "1.0,|,";
    	for(int i = 0; i < NUM_TRAJECTORIES; i++){
 		for(int j = 1; j < TRAJECTORY_LENGTH+1; j++){
 			file_trace << mpc_predict_trajectory[j].getX() << "," << mpc_predict_trajectory[j].getY() 
 				<< "," << monte_carlo_trajectories[i][j].getX() << "," << monte_carlo_trajectories[i][j].getY() << ",";
+			file_trace_prob << 1.0/NUM_TRAJECTORIES << ",";
 		}
 		file_trace << "|,";
+		file_trace_prob << "|,";
 	}
 	file_trace << "\n";
+	file_trace_prob << "\n";
    }
    
    void odomCallback(const nav_msgs::msg::Odometry::ConstSharedPtr odom_msg){
