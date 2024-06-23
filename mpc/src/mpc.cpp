@@ -68,6 +68,17 @@ std::vector<State> MPC::getPredictedTrajectory(){
 	return states;
 }
 
+std::vector<Input> MPC::getPredictedInputs(){
+	std::vector<Input> inputs;
+	Input temp;
+	for(int i = 0; i < num_inputs; i=i+2){
+		temp.setVelocity(QPSolution[num_states+i]);
+		temp.setSteeringAngle(QPSolution[num_states+i+1]);
+	 	inputs.emplace_back(temp);
+	}
+	return inputs;
+}
+
 Input MPC::getNextInput(){
 	Input temp;
 	temp.setVelocity(QPSolution[num_states]);

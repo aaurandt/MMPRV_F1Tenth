@@ -458,7 +458,7 @@ private:
 			
 			drive_msg.drive.steering_angle = steering_angle;
 			if(steering_angle > -.087267 && steering_angle < .087267) // 5 degrees in radians
-	 			drive_msg.drive.speed = 5.0;
+	 			drive_msg.drive.speed = 6.0;
 	 		else if (steering_angle > -.261799 && steering_angle < .261799) // 15 degrees in radians
 	 			drive_msg.drive.speed = 3.5;
 			else

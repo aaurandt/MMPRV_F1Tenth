@@ -26,7 +26,7 @@
 #include <chrono>
 
 #define NUM_TRAJECTORIES 216  //K
-#define TRAJECTORY_LENGTH 20 //N
+#define TRAJECTORY_LENGTH 30 //N
 
 class MPCNode : public rclcpp::Node{
 public:
@@ -48,14 +48,10 @@ public:
       pub_nav = this->create_publisher<ackermann_msgs::msg::AckermannDriveStamped>("/drive",1000);
       pub_points = this->create_publisher<visualization_msgs::msg::MarkerArray>("/current_pose",1000);
       pub_monte_carlo_predictions = this->create_publisher<visualization_msgs::msg::MarkerArray>("/monte_carlo_predictions", 1);
-      file_trace.open("./ego_vehicle_trace_K_216_N_20.csv", std::fstream::out | std::fstream::trunc);
-      if(file_trace.fail())
-      	perror("./ego_vehicle_trace.csv");
-      file_trace << "#x_ego, y_ego, x_opp, y_opp\n";
-      file_trace_prob.open("./ego_vehicle_trace_prob_K_216_N_20.csv", std::fstream::out | std::fstream::trunc);
-      file_timings.open("./mpc_mc_timings_K_216_N_20.csv", std::fstream::out | std::fstream::trunc);
-      if(file_timings.fail())
-      	perror("./mpc_mc_timings.csv");
+      file_trace.open("./ego_vehicle_trace_K_216_N_30.csv", std::fstream::out | std::fstream::trunc);
+      file_trace << "#v_ego, x_ego, y_ego, x_opp, y_opp\n";
+      file_trace_prob.open("./ego_vehicle_trace_prob_K_216_N_30.csv", std::fstream::out | std::fstream::trunc);
+      file_timings.open("./mpc_mc_timings_K_216_N_30.csv", std::fstream::out | std::fstream::trunc);
       file_timings << "#mpc, monte_carlo\n";
    }
    ~MPCNode(){
@@ -205,15 +201,16 @@ private:
 	pub_monte_carlo_predictions->publish(tree_lines_array);
    }
    
-   void recordPoints(std::vector<State>& mpc_predict_trajectory, State monte_carlo_trajectories[NUM_TRAJECTORIES][TRAJECTORY_LENGTH+1]){
-   	file_trace << mpc_predict_trajectory[0].getX() << "," << mpc_predict_trajectory[0].getY() 
+   void recordPoints(double initial_velocity, std::vector<Input>& mpc_predict_inputs, std::vector<State>& mpc_predict_trajectory, State monte_carlo_trajectories[NUM_TRAJECTORIES][TRAJECTORY_LENGTH+1]){
+   	file_trace << initial_velocity << "," << mpc_predict_trajectory[0].getX() << "," << mpc_predict_trajectory[0].getY() 
 				<< "," << monte_carlo_trajectories[0][0].getX() << "," << monte_carlo_trajectories[0][0].getY() << ",|,";
-	file_trace_prob << "1.0,|,";
+	file_trace_prob << "1.0,1.0,1.0,|,";
    	for(int i = 0; i < NUM_TRAJECTORIES; i++){
 		for(int j = 1; j < TRAJECTORY_LENGTH+1; j++){
-			file_trace << mpc_predict_trajectory[j].getX() << "," << mpc_predict_trajectory[j].getY() 
-				<< "," << monte_carlo_trajectories[i][j].getX() << "," << monte_carlo_trajectories[i][j].getY() << ",";
-			file_trace_prob << 1.0/NUM_TRAJECTORIES << ",";
+			file_trace << mpc_predict_inputs[j-1].getVelocity() << "," << mpc_predict_trajectory[j].getX() << "," << 
+			              mpc_predict_trajectory[j].getY() << "," << monte_carlo_trajectories[i][j].getX() << "," << 
+			              monte_carlo_trajectories[i][j].getY() << ",";
+			file_trace_prob << 1.0/NUM_TRAJECTORIES << "," << 1.0/NUM_TRAJECTORIES << "," << 1.0/NUM_TRAJECTORIES << ",";
 		}
 		file_trace << "|,";
 		file_trace_prob << "|,";
@@ -241,14 +238,15 @@ private:
     	tf2::Matrix3x3(tf_base_link_to_map.getRotation()).getRPY(roll, pitch, yaw);
 	
 	State curr_state(center_of_mass_map.getX(), center_of_mass_map.getY(), yaw);
-	Input curr_input((double)velocity, (double)steering_angle);
+	Input curr_mpc_input((double)velocity, (double)steering_angle);
 	
 	std::vector<State> reference_trajectory = ref_trajectory.findRefTrajectoryPurePursuit(curr_state, TRAJECTORY_LENGTH+1);
 	visualizeLines(reference_trajectory, 0);
 	
 	auto mpc_start = std::chrono::high_resolution_clock::now();
-	if(mpc_controller.UpdateMPC(curr_state, curr_input, reference_trajectory)){
+	if(mpc_controller.UpdateMPC(curr_state, curr_mpc_input, reference_trajectory)){
 		std::vector<State> mpc_predict_trajectory = mpc_controller.getPredictedTrajectory();
+		std::vector<Input> mpc_predict_inputs = mpc_controller.getPredictedInputs();
 		auto mpc_stop = std::chrono::high_resolution_clock::now();
 		visualizeLines(mpc_predict_trajectory, 2);
 		Input command = mpc_controller.getNextInput();
@@ -291,7 +289,7 @@ private:
 		      	auto mc_stop = std::chrono::high_resolution_clock::now();
 		      	file_timings << std::chrono::duration_cast<std::chrono::microseconds>(mpc_stop-mpc_start).count() << ","
 		      	             << std::chrono::duration_cast<std::chrono::microseconds>(mc_stop-mc_start).count() << "\n";
-		      	recordPoints(mpc_predict_trajectory, monte_carlo_trajectories);
+		      	recordPoints(curr_mpc_input.getVelocity(), mpc_predict_inputs, mpc_predict_trajectory, monte_carlo_trajectories);
 			visualizePredictions(monte_carlo_trajectories);
 		}
       	}

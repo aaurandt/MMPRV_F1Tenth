@@ -19,6 +19,7 @@ public:
 	MPC();
 	void setHorizon(int horizon);
 	std::vector<State> getPredictedTrajectory();
+	std::vector<Input> getPredictedInputs();
 	Input getNextInput();
 	bool UpdateMPC(State curr_state, Input curr_input, std::vector<State> reference_trajectory);
 private:
